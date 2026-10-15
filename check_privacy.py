@@ -16,6 +16,7 @@ def audit(root):
         'local-user-path': re.compile(r'[A-Za-z]:[\\/](?:Users|zcode)', re.I),
         'server-hostname': re.compile(r'\bser[0-9]{9,}\b'),
         'phone': re.compile(r'\+86[0-9]{11}\b'),
+        'personal-qq-mail': re.compile(r'\b[1-9][0-9]{4,}@(?:qq|foxmail)\.com\b', re.I),
         'url-password': re.compile(r'https?://[^\s/]+:[^\s/]+@'),
     }
     for name in paths:
@@ -39,11 +40,11 @@ def audit(root):
                 pass
         if name == '.env.example':
             for line in text.splitlines():
-                if line.startswith(('TG_API_ID=', 'TG_API_HASH=', 'TG_PHONE=', 'TG_PROXY=', 'QQ_BOT_TOKEN=')) and line.split('=', 1)[1].strip():
+                if line.startswith(('TG_API_ID=', 'TG_API_HASH=', 'TG_PHONE=', 'TG_PROXY=', 'QQ_BOT_TOKEN=', 'SMTP_USERNAME=', 'SMTP_AUTH_CODE=')) and line.split('=', 1)[1].strip():
                     findings.append((name, 'nonempty-example-credential'))
         if name == 'config.example.json':
             example = json.loads(text)
-            if example.get('channels') or example.get('qq', {}).get('user_id'):
+            if example.get('channels') or example.get('qq', {}).get('user_id') or example.get('qq', {}).get('recipient'):
                 findings.append((name, 'nonempty-example-recipient'))
     return paths, findings
 

@@ -11,7 +11,8 @@
     "cooldown_seconds": 300
   },
   "qq": {
-    "provider": "official",
+    "provider": "email",
+    "recipient": "",
     "enabled": false,
     "api_base": "http://127.0.0.1:5700",
     "user_id": ""

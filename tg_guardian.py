@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 from core import match_keywords, message_link, schedule_is_due
 from qq_notify import send_qq_private_message
+from email_notify import validate_email_config
 
 
 LOG = logging.getLogger("tg_guardian")
@@ -45,6 +46,12 @@ def validate_config(config: dict[str, Any]) -> None:
         if not isinstance(config.get(key, {}), dict):
             raise ValueError(f'{key}必须是对象')
     cooldown = int(config.get('alert', {}).get('cooldown_seconds', 300))
+    delivery = config.get('qq', {})
+    if delivery.get('provider') == 'email':
+        if any(key in delivery for key in ('password', 'auth_code', 'smtp_password', 'token')):
+            raise ValueError('邮箱授权码只能填写服务器.env')
+        if delivery.get('enabled'):
+            validate_email_config(delivery)
     if config.get('qq', {}).get('provider') == 'official' and config.get('qq', {}).get('enabled'):
         raise ValueError('QQ官方机器人已停止主动推送，无法开启即时私聊提醒')
     if cooldown < 0:
@@ -421,7 +428,7 @@ class Guardian:
             try:
                 await send_qq_private_message(qq_config, payload)
             except Exception:
-                LOG.exception("发送 QQ 提醒失败")
+                LOG.warning("外部通知发送失败，已加入补发队列")
                 self.store.enqueue_qq(payload, qq_config)
         if alert_config.get("beep", True):
             # 在 SSH/容器里无法弹窗时，日志和 Telegram 消息仍然有效。
@@ -456,11 +463,16 @@ class Guardian:
             return
         rows = self.store.db.execute('SELECT fingerprint,payload,config,attempts FROM qq_outbox WHERE next_attempt <= ? AND attempts < 5 LIMIT 5', (time.time(),)).fetchall()
         for key, payload, config, attempts in rows:
+            if json.loads(config) != self.config.get('qq', {}):
+                # Never deliver old queued alerts to a disabled/replaced destination.
+                self.store.db.execute('DELETE FROM qq_outbox WHERE fingerprint=?', (key,))
+                self.store.db.commit()
+                continue
             try:
                 await send_qq_private_message(json.loads(config), payload)
                 self.store.db.execute('DELETE FROM qq_outbox WHERE fingerprint=?', (key,))
             except Exception:
-                LOG.warning('QQ通知补发失败，重试次数 %s/5', attempts + 1)
+                LOG.warning('外部通知补发失败，重试次数 %s/5', attempts + 1)
                 self.store.db.execute('UPDATE qq_outbox SET attempts=?,next_attempt=? WHERE fingerprint=?', (attempts + 1, time.time() + 60, key))
             self.store.db.commit()
 

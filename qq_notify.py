@@ -7,10 +7,13 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse
+from email_notify import send_email
 
 
 async def send_qq_private_message(config: dict[str, Any], message: str) -> str:
-    """Send a private message through a OneBot v11-compatible HTTP API."""
+    """Deliver a notification (the legacy entry point also supports email)."""
+    if config.get('provider') == 'email':
+        return await send_email(config, message)
     if config.get('provider', 'onebot') != 'onebot':
         raise ValueError('QQ官方机器人不支持全天候主动私聊推送，请选择其他通知方式')
     api_base = str(config.get("api_base", "http://127.0.0.1:5700")).rstrip("/")

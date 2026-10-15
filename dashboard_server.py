@@ -87,13 +87,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             except Exception as exc:
                 self._json({"ok": False, "error": str(exc)}, 400)
             return True
-        if method == 'POST' and path == '/api/test-qq':
+        if method == 'POST' and path in {'/api/test-qq', '/api/test-notification'}:
             try:
                 length = int(self.headers.get('Content-Length', '0'))
                 if not 0 < length < 20000:
                     raise ValueError('请求大小无效')
                 qq = json.loads(self.rfile.read(length).decode('utf-8'))
-                asyncio.run(send_qq_private_message(qq, 'MOMO TG频道助手：QQ机器人连接测试成功。'))
+                asyncio.run(send_qq_private_message(qq, 'MOMO TG频道助手：通知发送测试。收到此消息表示发送成功。'))
                 self._json({'ok': True})
             except Exception as exc:
                 self._json({'error': str(exc)}, 400)
