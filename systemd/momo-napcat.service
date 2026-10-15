@@ -1,0 +1,20 @@
+[Unit]
+Description=Momo QQ notification account (NapCat)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=momonapcat
+WorkingDirectory=/opt/napcat-user
+ExecStart=/usr/bin/xvfb-run -a /opt/napcat-user/Napcat/opt/QQ/qq --no-sandbox
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=25
+UMask=0077
+LimitCORE=0
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=Telegram channel keyword monitor and check-in assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tgguardian
+WorkingDirectory=/opt/tg-guardian
+EnvironmentFile=/opt/tg-guardian/.env
+ExecStart=/opt/tg-guardian/venv/bin/python /opt/tg-guardian/tg_guardian.py --config /opt/tg-guardian/config.json
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

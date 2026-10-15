@@ -1,0 +1,21 @@
+{
+  "timezone": "Asia/Shanghai",
+  "session": "data/tg_guardian",
+  "state_db": "data/state.sqlite3",
+  "alert_chats": [
+    "me"
+  ],
+  "alert": {
+    "enabled": true,
+    "beep": true,
+    "cooldown_seconds": 300
+  },
+  "qq": {
+    "provider": "official",
+    "enabled": false,
+    "api_base": "http://127.0.0.1:5700",
+    "user_id": ""
+  },
+  "checkin_poll_seconds": 20,
+  "channels": []
+}

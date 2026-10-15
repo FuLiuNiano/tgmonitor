@@ -1,0 +1,17 @@
+[Unit]
+Description=TG Guardian local configuration dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=tgguardian
+EnvironmentFile=/opt/tg-guardian/.env
+WorkingDirectory=/opt/tg-guardian
+ExecStart=/opt/tg-guardian/venv/bin/python /opt/tg-guardian/dashboard_server.py --directory /opt/tg-guardian/frontend/dist --config /opt/tg-guardian/config.json --data-dir /opt/tg-guardian/data --port 8080
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
