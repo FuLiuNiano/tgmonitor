@@ -10,6 +10,8 @@ from email.utils import formatdate, make_msgid, parseaddr
 
 
 def validate_email_config(config: dict) -> str:
+    if config.get('mail_service', 'qq') not in {'qq', '163'}:
+        raise ValueError('请选择QQ邮箱或163邮箱作为发件服务')
     # Deliberately do not accept credentials in JSON, API responses or outbox rows.
     if any(key in config for key in ('password', 'auth_code', 'smtp_password', 'token')):
         raise ValueError('邮箱授权码只能填写服务器.env，不能保存到面板配置')
@@ -28,7 +30,8 @@ async def send_email(config: dict, message: str) -> str:
     if not sender or not password:
         raise ValueError('请在服务器.env填写SMTP_USERNAME和SMTP_AUTH_CODE，然后重启服务')
     validate_email_config({'recipient': sender})
-    # QQ Mail implicit TLS; no plaintext SMTP or certificate-verification bypass.
+    smtp_host = {'qq': 'smtp.qq.com', '163': 'smtp.163.com'}[config.get('mail_service', 'qq')]
+    # Fixed provider allowlist and implicit TLS; no plaintext SMTP or TLS bypass.
     mail = EmailMessage()
     mail['From'] = sender
     mail['To'] = recipient
@@ -39,14 +42,14 @@ async def send_email(config: dict, message: str) -> str:
 
     def deliver():
         try:
-            with smtplib.SMTP_SSL('smtp.qq.com', 465, timeout=20,
+            with smtplib.SMTP_SSL(smtp_host, 465, timeout=20,
                                   context=ssl.create_default_context()) as client:
                 client.login(sender, password)
                 refused = client.send_message(mail)
                 if refused:
                     raise RuntimeError('邮件服务器拒绝收件地址')
         except smtplib.SMTPAuthenticationError:
-            raise RuntimeError('QQ邮箱认证失败，请检查SMTP服务和授权码') from None
+            raise RuntimeError('邮箱认证失败，请检查发件服务、SMTP服务和授权码') from None
         except Exception:
             # Do not expose SMTP replies, addresses, credentials or message bodies.
             raise RuntimeError('邮件发送失败，请检查SMTP网络、收件地址或稍后重试') from None

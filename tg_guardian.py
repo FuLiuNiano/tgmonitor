@@ -48,6 +48,8 @@ def validate_config(config: dict[str, Any]) -> None:
     cooldown = int(config.get('alert', {}).get('cooldown_seconds', 300))
     delivery = config.get('qq', {})
     if delivery.get('provider') == 'email':
+        if delivery.get('mail_service', 'qq') not in {'qq', '163'}:
+            raise ValueError('请选择QQ邮箱或163邮箱作为发件服务')
         if any(key in delivery for key in ('password', 'auth_code', 'smtp_password', 'token')):
             raise ValueError('邮箱授权码只能填写服务器.env')
         if delivery.get('enabled'):

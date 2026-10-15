@@ -5,7 +5,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from email_notify import send_email, validate_email_config
 from qq_notify import send_qq_private_message
@@ -13,6 +13,30 @@ from tg_guardian import Guardian, validate_config
 
 
 class EmailTests(unittest.TestCase):
+    def test_163_email_uses_163_smtp_and_environment_credentials(self):
+        settings = {'provider': 'email', 'mail_service': '163', 'recipient': 'receiver@example.invalid'}
+        validate_config({'channels': [], 'qq': {**settings, 'enabled': True}})
+        with patch.dict('os.environ', {'SMTP_USERNAME': 'sender@example.invalid', 'SMTP_AUTH_CODE': 'synthetic-test-only'}):
+            with patch('email_notify.smtplib.SMTP_SSL') as smtp:
+                client = smtp.return_value.__enter__.return_value
+                client.send_message.return_value = {}
+                asyncio.run(send_qq_private_message(settings, '163邮件提醒测试'))
+                self.assertEqual(smtp.call_args.args, ('smtp.163.com', 465))
+                self.assertTrue(smtp.call_args.kwargs['context'].check_hostname)
+                client.login.assert_called_once_with('sender@example.invalid', 'synthetic-test-only')
+                mail = client.send_message.call_args.args[0]
+                self.assertEqual(mail['From'], 'sender@example.invalid')
+                self.assertEqual(mail['To'], settings['recipient'])
+
+    def test_unsupported_mail_service_is_rejected_before_connection(self):
+        with patch('email_notify.smtplib.SMTP_SSL') as smtp:
+            for enabled in (False, True):
+                with self.assertRaises(ValueError):
+                    validate_config({'channels': [], 'qq': {'provider': 'email', 'enabled': enabled, 'mail_service': 'custom'}})
+            with self.assertRaises(ValueError):
+                asyncio.run(send_email({'mail_service': 'custom', 'recipient': 'receiver@example.invalid'}, 'test'))
+            smtp.assert_not_called()
+
     def test_encrypted_email_dispatch(self):
         settings = {'provider': 'email', 'recipient': 'receiver@example.invalid'}
         with patch.dict('os.environ', {'SMTP_USERNAME': 'sender@example.invalid', 'SMTP_AUTH_CODE': 'synthetic-test-only'}):
