@@ -15,6 +15,27 @@ def match_keywords(text: str, keywords: Iterable[str]) -> list[str]:
     return found
 
 
+def match_keyword_rules(text: str, rules: Iterable[str]) -> list[str]:
+    """AND whitespace-separated terms within a line; OR independent lines.
+
+    All terms must occur in the same message, in any order and at any distance.
+    Keep the older phrase matcher separate for check-in reply/button selection.
+    """
+    folded = (text or '').casefold()
+    found: list[str] = []
+    seen: set[tuple[str, ...]] = set()
+    for rule in rules:
+        for line in str(rule).splitlines():
+            terms = line.split()
+            key = tuple(sorted({term.casefold() for term in terms}))
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            if all(term in folded for term in key):
+                found.append(' '.join(terms))
+    return found
+
+
 def parse_hhmm(value: str) -> time:
     hour, minute = (int(part) for part in value.strip().split(":", 1))
     if not 0 <= hour <= 23 or not 0 <= minute <= 59:

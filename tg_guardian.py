@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 from zoneinfo import ZoneInfo
 
-from core import match_keywords, message_link, schedule_is_due
+from core import match_keyword_rules, match_keywords, message_link, schedule_is_due
 from qq_notify import send_qq_private_message
 from email_notify import validate_email_config
 
@@ -380,7 +380,7 @@ class Guardian:
         if not channel or channel.get("enabled", True) is False:
             return
         text = event.raw_text or ""
-        keywords = match_keywords(text, channel.get("keywords", []))
+        keywords = match_keyword_rules(text, channel.get("keywords", []))
         if not keywords:
             return
 

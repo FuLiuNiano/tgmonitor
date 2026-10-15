@@ -17,6 +17,32 @@ from tg_guardian import Guardian, validate_config
 
 
 class IntegrationTests(unittest.TestCase):
+    def test_grouped_keywords_notify_once_when_any_complete_line_matches(self):
+        async def run():
+            with tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / 'config.json'
+                rule = {'chat': '@news', 'keywords': ['上新 优惠', '通知'], 'enabled': True}
+                config = {'channels': [rule], 'alert': {'beep': False}, 'qq': {'enabled': True}}
+                path.write_text(json.dumps(config), encoding='utf-8')
+                guardian = Guardian(config, path)
+                guardian.client = types.SimpleNamespace(send_message=AsyncMock())
+                guardian.channel_by_id[123] = rule
+                guardian.entities[123] = types.SimpleNamespace(username='news')
+                try:
+                    with patch('tg_guardian.send_qq_private_message', new_callable=AsyncMock) as deliver:
+                        for number, text in enumerate(['仅有上新', '仅有优惠'], start=1):
+                            await guardian.handle_message(types.SimpleNamespace(chat_id=123, id=number, raw_text=text, out=False), 'new')
+                        deliver.assert_not_awaited()
+                        event = types.SimpleNamespace(chat_id=123, id=3, raw_text='优惠上新通知', out=False)
+                        await guardian.handle_message(event, 'new')
+                        await guardian.handle_message(event, 'new')
+                        self.assertEqual(deliver.await_count, 1)
+                        await guardian.handle_message(types.SimpleNamespace(chat_id=123, id=4, raw_text='独立通知', out=False), 'new')
+                        self.assertEqual(deliver.await_count, 2)
+                finally:
+                    guardian.store.close()
+        asyncio.run(run())
+
     def test_discovery_marked_ids_selected_rules_and_message_delivery(self):
         async def run():
             entity = types.SimpleNamespace(id=123, username='news', broadcast=True)
