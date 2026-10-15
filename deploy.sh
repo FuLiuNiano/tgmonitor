@@ -10,8 +10,13 @@ if [[ "$(id -u)" != "0" ]]; then
 fi
 
 if [[ "$SCRIPT_DIR" != "$APP_DIR" ]]; then
-  echo "请将压缩包解压到 $APP_DIR 后再执行。"
+  echo "请通过deploy_from_git.sh同步代码到 $APP_DIR 后执行。"
   echo "当前目录：$SCRIPT_DIR"
+  exit 1
+fi
+
+if systemctl is-active --quiet tg-guardian || systemctl is-active --quiet tg-guardian-dashboard; then
+  echo '运行服务尚未停止，请从独立源码目录使用deploy_from_git.sh更新。'
   exit 1
 fi
 
@@ -20,7 +25,7 @@ if ! id -u tgguardian >/dev/null 2>&1; then
 fi
 
 install -d -m 0750 -o tgguardian -g tgguardian "$APP_DIR/data"
-/usr/bin/python3 -m venv "$APP_DIR/venv"
+/usr/bin/python3 -m venv --clear "$APP_DIR/venv"
 "$APP_DIR/venv/bin/python" -m pip install --upgrade pip
 "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
@@ -34,10 +39,11 @@ fi
 if [[ -f "$APP_DIR/frontend/dist/index.html" ]]; then
   echo '使用更新包内已构建的前端。'
 elif command -v npm >/dev/null 2>&1; then
-  npm install --prefix "$APP_DIR/frontend" --no-audit --no-fund
+  npm ci --prefix "$APP_DIR/frontend" --no-audit --no-fund
   npm run build --prefix "$APP_DIR/frontend"
 else
-  echo "警告：未找到 npm，前端尚未构建。"
+  echo "未找到npm，也没有已构建前端，部署失败。"
+  exit 1
 fi
 
 chown -R tgguardian:tgguardian "$APP_DIR"

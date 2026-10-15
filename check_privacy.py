@@ -2,6 +2,7 @@
 import ipaddress
 import json
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -47,9 +48,18 @@ def audit(root):
     return paths, findings
 
 
+def audit_tracked(root, allowed):
+    if not (root / '.git').exists():
+        return []
+    result = subprocess.run(['git', 'ls-files', '-z'], cwd=root, capture_output=True, check=True)
+    tracked = {path for path in result.stdout.decode('utf-8').split('\0') if path}
+    return [(name, 'tracked-file-not-allowlisted') for name in sorted(tracked - set(allowed))]
+
+
 if __name__ == '__main__':
     root = Path(__file__).resolve().parent
     paths, findings = audit(root)
+    findings += audit_tracked(root, paths)
     if findings:
         for path, category in findings:
             print(f'{path}: {category}')

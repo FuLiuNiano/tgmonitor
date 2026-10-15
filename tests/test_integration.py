@@ -26,7 +26,7 @@ class IntegrationTests(unittest.TestCase):
                     yield types.SimpleNamespace(is_channel=True, entity=item, name='频道')
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder) / 'config.json'
-                config = {'channels': [{'chat': '@news', 'keywords': ['上新'], 'enabled': True}], 'alert_chats': ['me'], 'qq': {'enabled': True, 'user_id': '12345'}}
+                config = {'channels': [{'chat': '@news', 'keywords': ['上新'], 'enabled': True}], 'alert_chats': ['me'], 'qq': {'enabled': True, 'user_id': '12345'}, 'alert': {'beep': False}}
                 path.write_text(json.dumps(config), encoding='utf-8')
                 guardian = Guardian(config, path)
                 guardian.client = types.SimpleNamespace(iter_dialogs=dialogs, send_message=AsyncMock())
@@ -122,7 +122,8 @@ class IntegrationTests(unittest.TestCase):
                 guardian = Guardian(config, path)
                 guardian.client = types.SimpleNamespace(send_message=AsyncMock())
                 with patch('tg_guardian.send_qq_private_message', new_callable=AsyncMock, side_effect=RuntimeError('offline')):
-                    await guardian.notify('测试', '消息', qq=True)
+                    with self.assertLogs('tg_guardian', level='ERROR'):
+                        await guardian.notify('测试', '消息', qq=True)
                 self.assertEqual(guardian.store.db.execute('SELECT COUNT(*) FROM qq_outbox').fetchone()[0], 1)
                 with patch('tg_guardian.send_qq_private_message', new_callable=AsyncMock) as qq:
                     await guardian.retry_qq_outbox()

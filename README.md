@@ -19,10 +19,14 @@ Telegram 个人账号频道监控、逐频道关键词提醒和定时消息签�
 需要 Python 3.11+、venv、Node.js 20+、npm 与 systemd。以下命令在服务器 root 终端执行：
 
 ```bash
-git clone https://github.com/FuLiuNiano/tgmonitor.git /opt/tg-guardian
-cd /opt/tg-guardian
-bash deploy.sh
+git clone https://github.com/FuLiuNiano/tgmonitor.git /opt/tgmonitor-src
+cd /opt/tgmonitor-src
+bash deploy_from_git.sh
 ```
+
+源码保存在 `/opt/tgmonitor-src`，实际配置、会话和运行环境单独保存在 `/opt/tg-guardian`。已有旧版安装时，也使用上述命令；部署脚本只同步白名单源码和新构建前端，保留已有实际配置与登录数据。
+
+部署会先运行隐私检查和测试、构建前端，再更新运行目录并检查面板API。尚未登录的Telegram后台不会自动启动。
 
 编辑本机生成的 `.env`，填写 Telegram API ID、API Hash 和手机号。API 凭据可从 [my.telegram.org](https://my.telegram.org) 获取。所有真实值只保存在自己的服务器。
 
@@ -63,6 +67,16 @@ bash install_napcat.sh
 脚本从 NapCat 项目维护的安装器下载软件，以独立用户运行，并将管理面板及消息接口绑定本机地址。令牌随机生成，不提交仓库。详细步骤见 [NAPCAT_GUIDE.md](NAPCAT_GUIDE.md)。
 
 官方 QQ 开放平台机器人的主动推送存在平台限制，当前项目不实现官方机器人的全天候主动私聊提醒。参考 [官方消息文档](https://github.com/tencent-connect/bot-docs/blob/main/docs/develop/api-v2/server-inter/message/send-receive/send.md)。
+
+## 从GitHub更新
+
+```bash
+cd /opt/tgmonitor-src
+git pull --ff-only
+bash deploy_from_git.sh
+```
+
+不要在源码仓库内填写实际密钥。构建或测试失败时，部署脚本会在停止旧服务之前退出。服务器安装与扫码登录需要可写权限及交互式终端；本地测试通过不代表已完成真实账号验证。
 
 ## 隐私与发布
 

@@ -327,7 +327,7 @@ class Guardian:
         api_id = os.getenv("TG_API_ID", "").strip()
         api_hash = os.getenv("TG_API_HASH", "").strip()
         phone = os.getenv("TG_PHONE", "").strip() or None
-        if not api_id.isdigit() or not api_hash:
+        if not api_id.isdigit() or not api_hash or api_hash == 'replace_with_api_hash' or api_id == '123456':
             raise SystemExit("请先设置 TG_API_ID 和 TG_API_HASH 环境变量。")
         proxy = proxy_from_env()
         if proxy:
